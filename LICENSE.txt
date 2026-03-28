@@ -1,0 +1,58 @@
+MIT License with Non-Commercial Restriction
+
+Copyright (c) 2026 DanaBuilds
+https://github.com/DanaBuilds
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to use,
+copy, modify and distribute the Software for PERSONAL and EDUCATIONAL purposes
+only, subject to the following conditions:
+
+1. NON-COMMERCIAL USE ONLY
+   The Software may not be used, in whole or in part, for commercial purposes
+   without explicit written permission from DanaBuilds. Commercial purposes
+   include but are not limited to: selling the Software, incorporating it into
+   a paid product or service, or using it to generate revenue.
+
+2. ATTRIBUTION REQUIRED
+   All copies or substantial portions of the Software must include this license
+   notice and the following attribution:
+
+   "Libby was originally created by DanaBuilds — https://github.com/DanaBuilds"
+
+3. NO REBRANDING
+   The Software may not be repackaged or redistributed under a different name
+   without explicit written permission from DanaBuilds.
+
+4. SHARE ALIKE
+   Any modified versions of the Software must be shared under the same license
+   terms as this original and must clearly indicate what changes were made.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE.
+
+---
+
+For commercial licensing enquiries, please contact DanaBuilds via GitHub:
+https://github.com/DanaBuilds
+
+---
+
+Third-Party Libraries
+
+Libby is built on top of the following open source libraries, each governed
+by their own licenses:
+
+  - ChromaDB           — Apache 2.0
+  - sentence-transformers — Apache 2.0
+  - Ollama             — MIT
+  - phi3:mini          — MIT
+  - openpyxl           — MIT
+  - PyMuPDF (fitz)     — GNU AGPL v3
+  - pandas             — BSD 3-Clause
+  - requests           — Apache 2.0
+  - Python             — PSF License
