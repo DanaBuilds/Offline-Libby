@@ -1,48 +1,57 @@
-# 📚 Libby — Offline AI Knowledge Assistant
+# 📚 Libby V7 — Universal Offline AI Assistant
 
-Libby is a fully offline, air-gapped AI assistant that answers questions from your personal knowledge base.
-She reads `.txt`, `.xlsx`, and `.pdf` files and uses a local AI brain to give clear, accurate answers — no internet required.
+Libby is a fully offline, air-gapped AI assistant that answers questions from your personal knowledge base and business data. She runs entirely on your machine — no internet, no cloud, no data leaving your computer.
 
 ---
 
-## 🖥️ What You Need
+## ✨ What's New in V7
 
-Before setting up Libby, make sure your computer has:
+- **Universal** — one app, two modes in separate tabs
+- **Settings panel** — change your knowledge folder, theme and company name without touching code
+- **Tab system** — Knowledge Assistant and Enterprise BI each have their own independent conversation
+- **Dot indicator** — shows when a tab has conversation history
+- **Smart report generation** — type "generate report..." to export formatted Excel files
+- **Folder switching** — point Libby at any folder on your computer, she rebuilds automatically
+- **No hardcoded paths** — works on any computer without editing the code
+
+---
+
+## 🖥️ System Requirements
+
 - Windows 10 or 11 (64-bit)
-- At least 8GB RAM (16GB or more recommended)
-- At least 10GB of free disk space
-- An internet connection for the initial setup only
+- At least 8GB RAM (16GB recommended)
+- At least 10GB free disk space
+- Internet connection for initial setup only
 
 ---
 
 ## 🗂️ Folder Structure
 
-Create a folder called `RAG Test` on your `C:` drive:
+Create a folder anywhere on your computer for your knowledge base. Libby will find all supported files automatically no matter how deep the subfolders go.
 
+Example structure:
 ```
-C:\RAG Test\
-  ├── libby_ui.py          ← Libby V1 (friendly, conversational)
-  ├── libby_ui_V2.py       ← Libby V2 (fast, strict, bullet points)
-  ├── libby_ui_V3.py       ← Libby V3 (latest - recommended)
-  ├── rag_test.py          ← Command line version
-  ├── Farming\             ← Example knowledge folder
-  │     ├── Fruit\
-  │     ├── Vegetables\
-  │     └── planting_guide.xlsx
-  └── First Aid\           ← Example knowledge folder
+C:\My Knowledge\
+  ├── Health\
+  │     ├── first_aid_basics.txt
+  │     └── medication_guide.pdf
+  ├── Business\
+  │     ├── sales_data.xlsx
+  │     └── inventory.xlsx
+  └── Survival\
+        └── water_purification.txt
 ```
 
-You can rename or reorganize folders however you like.
-Libby will automatically find all `.txt`, `.xlsx`, and `.pdf` files no matter how deep the folders go.
+Libby auto-creates a `libby_db` folder inside your knowledge folder to store her database. You never need to touch it.
 
 ---
 
 ## ⚙️ Step 1 — Install Python
 
 1. Go to `https://www.python.org/downloads/`
-2. Download the latest **Python 3.x** version for Windows
+2. Download the latest **Python 3.x** version for Windows (64-bit)
 3. Run the installer
-4. ⚠️ **Important:** Check the box that says **"Add Python to PATH"** before clicking Install
+4. ⚠️ **Important:** Check **"Add Python to PATH"** before clicking Install
 5. Click **Install Now**
 
 Verify it worked — open Command Prompt and type:
@@ -55,29 +64,24 @@ You should see something like `Python 3.14.0`
 
 ## 📦 Step 2 — Install Required Libraries
 
-Open Command Prompt, navigate to your RAG Test folder:
+Open Command Prompt and run:
 ```
-cd "C:\RAG Test"
-```
-
-Then install all required libraries:
-```
-pip install chromadb sentence-transformers openpyxl pymupdf requests
+pip install chromadb sentence-transformers openpyxl pymupdf requests pandas
 ```
 
-This may take a few minutes. Wait for it to finish.
+This may take a few minutes. Wait for it to finish before moving on.
 
 ---
 
 ## 🤖 Step 3 — Install Ollama
 
-Ollama is the engine that runs Libby's AI brain locally on your machine.
+Ollama runs the AI brain locally on your machine.
 
 1. Go to `https://ollama.com/download`
 2. Click **Download for Windows**
 3. Run the installer like any normal program
 
-Verify it worked — open a new Command Prompt and type:
+Verify it worked:
 ```
 ollama --version
 ```
@@ -86,107 +90,159 @@ ollama --version
 
 ## 🧠 Step 4 — Download the AI Model
 
-Libby V3 uses `phi3:mini` — a fast, efficient model that runs well on most machines.
+Libby uses `phi3:mini` — a fast, efficient model that works well on most machines.
 
-In Command Prompt type:
+In Command Prompt:
 ```
 ollama pull phi3:mini
 ```
 
-This downloads about 2GB. This is the **last time you need internet** for Libby to work.
-
-To test it works:
-```
-ollama run phi3:mini
-```
-Type `hello` and it should respond. Type `/bye` to exit.
+This downloads approximately 2GB. This is the **last time you need internet** for Libby to work.
 
 ---
 
 ## 📄 Step 5 — Add Your Knowledge Files
 
-Place your knowledge files inside `C:\RAG Test` in any folder structure you like.
+Place your files inside your knowledge folder in any structure you like.
 
-Supported file types:
-- 📄 `.txt` — plain text files
-- 📊 `.xlsx` — Excel spreadsheets (save from LibreOffice or Excel)
-- 📕 `.pdf` — text-based PDF documents (not scanned images)
+**Supported file types:**
+| Type | Icon | Best For |
+|---|---|---|
+| `.txt` | 📄 | Notes, guides, manuals, written knowledge |
+| `.xlsx` | 📊 | Business data, spreadsheets, sales, inventory |
+| `.pdf` | 📕 | Reports, documents, reference material |
 
-**Tip:** LibreOffice is a free alternative to Microsoft Office that works perfectly for creating `.xlsx` and `.pdf` files.
-Download it at `https://www.libreoffice.org/download/libreoffice/` — choose the **Still** version.
+**Tips for best results:**
+- Use clear descriptive filenames
+- Organise files into subfolders by topic
+- Excel files work best with clear column headers in row 1
+- PDFs must be text-based (not scanned images)
 
 ---
 
 ## 🚀 Step 6 — Run Libby
 
-You need two Command Prompt windows open at the same time:
-
-**Window 1 — Start Ollama:**
+Run from Command Prompt:
 ```
-ollama serve
-```
-Leave this window open. It runs quietly in the background.
-
-**Window 2 — Start Libby:**
-```
-cd "C:\RAG Test"
-python libby_ui_V3.py
+python libby_V7.py
 ```
 
-Libby will load, index your files and open her interface.
-The first run takes longer as she indexes everything — subsequent runs are much faster.
+On first launch Libby will index all your files. This may take a minute depending on how many files you have. Subsequent launches are much faster.
+
+---
+
+## ⚙️ Step 7 — Configure Your Settings
+
+Click **⚙ Settings** in the top right corner to configure:
+
+| Setting | What it does |
+|---|---|
+| **Knowledge Folder** | Point Libby at your files — click Browse to select any folder |
+| **Theme** | Switch between Dark Mode and Light Mode |
+| **Company Name** | Personalise the header and exported reports |
+
+Click **Save & Apply** — changes take effect immediately, no restart needed.
+
+When you change the knowledge folder Libby automatically clears her database and rebuilds from the new location. Only files from the selected folder will appear.
 
 ---
 
 ## 💬 How to Use Libby
 
-- Type your question in the box at the bottom
-- Press **Enter** or click **QUERY**
-- Libby will search your knowledge base and answer using only your files
-- The source file is shown below each answer
-- Use **🗑 Clear** to start a fresh conversation
-- Toggle between **Dark Mode** and **Light Mode** using the button in the top right
+### 📚 Knowledge Assistant Tab
+
+Ask questions in plain English from your loaded documents:
+
+```
+How do I treat a second degree burn?
+What foods have the longest shelf life?
+How long should I boil water to purify it?
+```
+
+Libby answers using only what is in your knowledge base — never guessing or making things up.
+
+### 📊 Enterprise BI Tab
+
+Ask data questions from your Excel files:
+
+```
+What is the total salary budget?
+Which product has the highest profit margin?
+Which customers are on hold?
+What is the average revenue per sales rep?
+```
+
+Libby performs real calculations using your actual data.
+
+### 📊 Generating Reports
+
+In the Enterprise BI tab, start your message with **"generate report"**:
+
+```
+generate report showing sales by region highest to lowest
+generate report of inventory items lowest to highest stock
+generate report of active customers by outstanding balance
+generate report of pending purchase orders by supplier
+generate report showing employees by salary highest to lowest
+```
+
+A save dialog opens — choose where to save your Excel report. Libby builds a formatted report with a company header, sorted and grouped data, a totals row and a confidentiality footer.
+
+---
+
+## 🗂️ Tab System
+
+Libby has two independent conversation tabs:
+
+| Tab | Purpose | Indicator |
+|---|---|---|
+| 📚 Knowledge Assistant | Document Q&A | ● dot appears when tab has messages |
+| 📊 Enterprise BI | Data, calculations, reports | ● dot appears when tab has messages |
+
+- Each tab keeps its own separate conversation history
+- Switching tabs instantly shows that tab's conversation
+- The **Clear** button only clears the active tab
+- History resets when you close Libby
 
 ---
 
 ## 🔒 Privacy & Air-Gap
 
-Libby is designed to work **completely offline**:
-- No data is sent to the internet
-- No cloud APIs are used
-- All knowledge stays on your machine
-- Ollama and ChromaDB run entirely locally
+Libby is designed to work **completely offline:**
 
-After the initial setup, Libby never needs an internet connection.
+- ✅ No data sent to the internet
+- ✅ No cloud APIs used
+- ✅ All knowledge stays on your machine
+- ✅ Ollama and ChromaDB run entirely locally
+- ✅ Generated reports never leave your computer unless you share them
 
----
-
-## 🗃️ Libby Versions
-
-| File | Version | Best For |
-|---|---|---|
-| `libby_ui.py` | V1 | Friendly conversational answers |
-| `libby_ui_V2.py` | V2 | Fast strict bullet point answers |
-| `libby_ui_V3.py` | V3 | Latest — recommended for most use |
+After the initial setup Libby never needs an internet connection.
 
 ---
 
 ## 🛠️ Troubleshooting
 
-**"0 chunks loaded" on startup:**
-- Delete the `rag_db` folder inside `C:\RAG Test` and restart Libby
-- Make sure your files are inside `C:\RAG Test` or its subfolders
+**Libby shows "0 chunks" or files are missing:**
+- Make sure your files are inside the selected knowledge folder
+- Delete the `libby_db` folder inside your knowledge folder and restart
+- Check that your files are `.txt`, `.xlsx` or `.pdf` format
 
 **"Ollama not running" error:**
-- Make sure `ollama serve` is running in a separate CMD window
+- Open a new Command Prompt window and type: `ollama serve`
+- Leave that window open and restart Libby
 
 **Excel file not loading:**
-- Open the file in LibreOffice Calc and re-save as `.xlsx` format
-- Make sure it's not open in another program when Libby starts
+- Open the file in LibreOffice Calc or Excel and re-save as `.xlsx`
+- Make sure the file is not open in another program when Libby starts
+- Check that row 1 contains column headers
+
+**Settings not saving:**
+- Make sure the selected folder actually exists on your computer
+- Check that you have write permission to the Libby folder
 
 **File saved as `.py.txt` instead of `.py`:**
-- In Notepad, use **File → Save As → All Files (*.*)** when saving Python files
-- Or rename using CMD: `ren "filename.py.txt" "filename.py"`
+- In Notepad: File → Save As → change Save as type to **All Files (*.*)**
+- Name the file `libby_V7.py` exactly
 
 ---
 
@@ -200,19 +256,48 @@ After the initial setup, Libby never needs an internet connection.
 | openpyxl | latest |
 | pymupdf | latest |
 | requests | latest |
+| pandas | latest |
 | Ollama | latest |
-| AI Model | phi3:mini |
+| AI Model | phi3:mini (~2GB) |
+
+---
+
+## 📁 Auto-Generated Files
+
+Libby creates these automatically — you never need to edit them:
+
+| File | Purpose |
+|---|---|
+| `libby_config.json` | Saves your settings (folder path, theme, company name) |
+| `libby_db/` | ChromaDB vector database — stores your indexed knowledge |
 
 ---
 
 ## 🗺️ Roadmap
 
-- [ ] Package as `.exe` for one-click launch
+- [ ] Package as `.exe` for one-click launch — no Python required
 - [ ] Deploy to dedicated offline hardware (Raspberry Pi / Mini PC)
 - [ ] Solar power integration for true off-grid use
-- [ ] Support for more file types (Word docs, CSV)
+- [ ] Word document `.docx` support
+- [ ] Scanned PDF support via OCR
+- [ ] Conversation history saved between sessions
 
 ---
 
-*Built with Python, ChromaDB, Ollama, and phi3:mini*
+## 📜 Version History
+
+| Version | Highlights |
+|---|---|
+| V1 | Basic RAG, CLI, Mistral |
+| V2 | Tkinter UI, phi3:mini, strict mode |
+| V3 | Dark/light themes, PDF support |
+| V4 | Enterprise BI, pandas calculations |
+| V5 | Ultra-concise mode, professional UI |
+| V6 | Smart report generation, conversation memory |
+| **V7** | **Universal app, tab system, settings panel, folder switching** |
+
+---
+
+*Built with Python, ChromaDB, Ollama and phi3:mini*
 *Designed for offline, air-gapped environments*
+*Created by DanaBuilds*
