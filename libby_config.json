@@ -3,5 +3,5 @@
   "theme": "dark",
   "mode": "knowledge",
   "company_name": "Libby Intelligence",
-  "ollama_model": "phi3:mini"
+  "ollama_model": "llama3.2"
 }
