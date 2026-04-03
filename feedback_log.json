@@ -255,5 +255,100 @@
       "C:/RAG Uni Test\\Knowledge\\water_purification.txt"
     ],
     "rating": null
+  },
+  {
+    "id": "b9b9e5",
+    "timestamp": "2026-04-02T19:53:34.659288",
+    "tab": "knowledge",
+    "question": "How do I purify water?",
+    "answer": "\u26a0  Ollama not running. Open CMD and type: ollama serve",
+    "sources": [],
+    "rating": null
+  },
+  {
+    "id": "4a3886",
+    "timestamp": "2026-04-02T19:54:27.625700",
+    "tab": "knowledge",
+    "question": "How do I purify water?",
+    "answer": "Not found in knowledge base.",
+    "sources": [
+      "C:/RAG Uni Test\\Knowledge\\water_purification.txt"
+    ],
+    "rating": "negative"
+  },
+  {
+    "id": "6ea13e",
+    "timestamp": "2026-04-02T19:54:49.183402",
+    "tab": "knowledge",
+    "question": "How do I purify water?",
+    "answer": "To purify water, you have several options depending on the resources available to you. Here are some methods:\n\n\u2022 **Boiling**: This is the most reliable method when fuel is available. Bring water to a rolling boil for at least 1 minute. At elevations above 6,500 feet, boil for 3 minutes. Allow the water to cool before drinking and store it in a clean, sealed container.\n\n\u2022 **Filtration**: You can use a commercial filter like a LifeStraw or Sawyer Squeeze, or create an improvised filter by layering grass, sand, gravel, and charcoal in a container with holes at the bottom. Filtration removes particles and some bacteria but does not remove viruses. It's recommended to combine filtration with another method such as boiling or chemical treatment.\n\n\u2022 **Chemical Treatment**: There are two types of chemical treatment:\n  \u2022 Iodine tablets: Add 1 tablet per liter of clear water. Wait 30 minutes before drinking.\n  \u2022 Chlorine bleach (unscented 6-8.25%): Add 8 drops per gallon of clear water. Wait 30 minutes.\n\nChemical treatment is less effective in cold or murky water.\n\n\u2022 **Solar Disinfection (SODIS)**: Fill a clear plastic bottle with water and place it in direct sunlight for 6 hours (or 2 days if cloudy). This method is only effective for clear water in strong sunlight.\n\nIt's essential to note the signs of contaminated water, which include unusual color or cloudiness, foul odor, presence of algae or foam, located downstream from animal activity or human settlement.",
+    "sources": [
+      "C:/RAG Uni Test\\Knowledge\\water_purification.txt"
+    ],
+    "rating": null
+  },
+  {
+    "id": "11abad",
+    "timestamp": "2026-04-02T20:03:32.816454",
+    "tab": "knowledge",
+    "question": "How do I purifty water?",
+    "answer": "\u26a0  Ollama not running. Open CMD and type: ollama serve",
+    "sources": [],
+    "rating": null
+  },
+  {
+    "id": "16ec8a",
+    "timestamp": "2026-04-02T20:05:07.882802",
+    "tab": "knowledge",
+    "question": "How do I purify water?",
+    "answer": "Not found in knowledge base.",
+    "sources": [
+      "C:/RAG Uni Test\\Knowledge\\water_purification.txt"
+    ],
+    "rating": null
+  },
+  {
+    "id": "d9d350",
+    "timestamp": "2026-04-02T20:05:32.892838",
+    "tab": "knowledge",
+    "question": "How do I purify water?",
+    "answer": "To purify water, you have several options depending on the resources available to you. Here are some methods:\n\n\u2022 **Boiling**: This is the most reliable method when fuel is available. Bring water to a rolling boil for at least 1 minute. At elevations above 6,500 feet, boil for 3 minutes. Allow the water to cool before drinking and store it in a clean, sealed container.\n\n\u2022 **Filtration**: Use a commercial filter such as a LifeStraw or Sawyer Squeeze. Alternatively, you can create an improvised filter by layering grass, sand, gravel, and charcoal in a container with holes at the bottom. Filtration removes particles and some bacteria but does not remove viruses. It's recommended to combine filtration with another method, such as boiling or chemical treatment.\n\n\u2022 **Chemical Treatment**: There are two types of chemical treatment:\n  \u2022 Iodine tablets: Add 1 tablet per liter of clear water. Wait 30 minutes before drinking.\n  \u2022 Chlorine bleach (unscented 6-8.25%): Add 8 drops per gallon of clear water. Wait 30 minutes.\n\n\u2022 **Solar Disinfection (SODIS)**: Fill a clear plastic bottle with water and place it in direct sunlight for 6 hours (or 2 days if cloudy). This method is only effective for clear water in strong sunlight.\n\nIt's essential to note that chemical treatment is less effective in cold or murky water. Additionally, always check the signs of contaminated water before attempting any purification method:\n\u2022 Unusual color or cloudiness\n\u2022 Foul odor\n\u2022 Presence of algae or foam\n\u2022 Located downstream from animal activity or human settlement\n\nRemember, access to clean drinking water is crucial for survival, and proper purification methods can help ensure your safety.",
+    "sources": [
+      "C:/RAG Uni Test\\Knowledge\\water_purification.txt"
+    ],
+    "rating": null
+  },
+  {
+    "id": "9edee7",
+    "timestamp": "2026-04-02T20:05:52.616298",
+    "tab": "knowledge",
+    "question": "Elaborate",
+    "answer": "To further elaborate on the methods for purifying water, it's essential to understand the effectiveness and limitations of each method.\n\n**Boiling**: As mentioned earlier, boiling is the most reliable method when fuel is available. Bringing water to a rolling boil for at least 1 minute is sufficient to kill most bacteria, viruses, and protozoa that can cause waterborne illnesses. However, it's crucial to note that at elevations above 6,500 feet, the boiling time should be extended to 3 minutes to ensure the water is properly disinfected.\n\n**Filtration**: Filtration is an effective method for removing particles and some bacteria from water, but it may not remove viruses. There are two types of filtration methods: commercial filters like LifeStraw or Sawyer Squeeze, and improvised filters using layers of grass, sand, gravel, and charcoal in a container with holes at the bottom. It's essential to combine filtration with another method, such as boiling or chemical treatment, to ensure the water is fully disinfected.\n\n**Chemical Treatment**: Chemical treatment involves adding disinfectants like iodine tablets or chlorine bleach to the water. Iodine tablets are effective when added to clear water and waiting for 30 minutes before drinking. Chlorine bleach can be used at a concentration of 6-8.25% per gallon, but it's essential to wait 30 minutes after adding the bleach before consuming the water.\n\n**Solar Disinfection (SODIS)**: This method involves filling a clear plastic bottle with water and placing it in direct sunlight for 6 hours or 2 days if cloudy. While SODIS is an effective method, it's only suitable for clear water in strong sunlight.\n\nIt's also essential to be aware of the signs of contaminated water, which include:\n\n\u2022 Unusual color or cloudiness\n\u2022 Foul odor\n\u2022 Presence of algae or foam\n\u2022 Located downstream from animal activity or human settlement\n\nWhen in doubt, it's always best to err on the side of caution and use multiple methods for purifying water to ensure its safety.",
+    "sources": [
+      "C:/RAG Uni Test\\Knowledge\\water_purification.txt"
+    ],
+    "rating": null
+  },
+  {
+    "id": "bb8797",
+    "timestamp": "2026-04-02T20:14:32.509272",
+    "tab": "knowledge",
+    "question": "How do I purify water?",
+    "answer": "To ensure the safety and potability of water, especially in survival situations where access to clean drinking water is limited, it's crucial to employ effective purification methods. Here are detailed steps for various techniques based on available resources as outlined by my knowledge base:\n\n**Boiling Water Purification Method:**\n1. Bring the water to a rolling boil using fuel if accessible; this method kills most pathogens present in contaminated water sources, making it safe for drinking purposes when done correctly. \n2. At sea level or below elevations of about 6,500 feet: Boil water for at least 1 minute to ensure purification from harmful microorganisms such as bacteria and viruses that may cause illnesses like diarrhea within hours after ingestion.\n3. If you're above the elevation of 6,500 feet where boiling is required for at least 3 minutes due to lower atmospheric pressure affecting water temperature: ensure this duration and follow through with allowing it to cool before consumption or storage in a clean sealed container away from potential contaminants.\n\n**Filtration Water Purification Method (with Improvised Filter):**\n1. Construct an improvised filter by layering grass, sand, gravel, and charcoal inside a container with holes at the bottom to create filtration channels for water; this setup can remove larger particles but is not effective against all pathogens like viruses or certain bacteria that are smaller than 0.2 microns in size.\n2. For more reliable results, combine it with another method such as boiling (as previously mentioned) to ensure the removal of a broader spectrum of contaminants and microorganisms from water sources before consumption.\n\n**Chemical Treatment Water Purification Method:**\n1. Use iodine tablets for chemical treatment by adding 1 tablet per liter of clear, transparent water; this method is effective against bacteria, viruses, and protozoa but may not work well in cold or murky waters due to the reduced efficacy of iodine at lower temperatures.\n2. Alternatively, chlorine bleach (unscented 6-8.25%) can be used by adding 8 drops per gallon; after mixing thoroughly and waiting for about 30 minutes before drinking - this method is also less effective in cold or murky water conditions but provides a chemical barrier against most pathogens when done correctly, making the water safe to consume.\n\n**Solar Disinfection (SODIS) Water Purification Method:**\n1. Fill clear plastic bottles with water and place them directly under strong sunlight for 6 hours or up to two days if in cloudy conditions; this method relies on UV radiation from the sun's rays, which can effectively disinfect small volumes of clean transparent water when exposed adequately.\n2. It is important to note that SODIS only works with clear and uncontaminated water sources under strong direct sunlight for a prolonged period; hence it may not be suitable in all situations or environments where these conditions are met consistently, but can serve as an alternative method when other options aren't available.\n3. Always ensure the bottles used do not previously contained any substances that could contaminate water and follow through with proper storage after disinfection to maintain purity until consumption is necessary. \n\nBy understanding these methods of water purification, you can increase your chances of safely accessing drinkable water in various survival scenarios or when faced with limited resources for cleaning up natural water sources. Remember that combining multiple techniques often yields the best results and always ensure to follow through each step thoroughly before consuming any treated water.",
+    "sources": [
+      "C:/RAG Uni Test\\Knowledge\\water_purification.txt"
+    ],
+    "rating": null
+  },
+  {
+    "id": "9da4fc",
+    "timestamp": "2026-04-02T20:34:17.280552",
+    "tab": "knowledge",
+    "question": "How do I purify water?",
+    "answer": "**How to purify water in the wild**\n\n1. **Identify the water source and check for contamination**  \n   \u2022 Look for unusual color or cloudiness, foul odor, algae, foam, or proximity to animal activity or human settlement.  \n   \u2022 If any of these signs are present, treat the water before drinking.\n\n2. **Choose a purification method (or combine methods)**  \n\n   **A. Boiling** \u2013 most reliable when fuel is available  \n   \u2022 Bring water to a rolling boil for **at least 1 minute**.  \n   \u2022 If you are at an elevation **above 6,500\u202fft**, boil for **3 minutes**.  \n   \u2022 Let the water cool before drinking.  \n   \u2022 Store in a clean, sealed container.\n\n   **B. Filtration** \u2013 removes particles and some bacteria, but not viruses  \n   \u2022 Use a commercial filter (e.g., LifeStraw, Sawyer Squeeze).  \n   \u2022 For an improvised filter:  \n     1. Layer grass, sand, gravel, and charcoal in a container with holes at the bottom.  \n     2. Pass water through the layers.  \n   \u2022 Always combine filtration with another method (boiling or chemical treatment) for full protection.\n\n   **C. Chemical treatment** \u2013 effective for clear water  \n   \u2022 **Iodine tablets**: add **1 tablet per liter** of clear water, wait **30 minutes** before drinking.  \n   \u2022 **Chlorine bleach** (unscented, 6\u20118.25%): add **8 drops per gallon** of clear water, wait **30 minutes**.  \n   \u2022 Note: chemical treatment is less effective in cold or murky water.\n\n   **D. Solar disinfection (SODIS)** \u2013 works only with clear water and strong sunlight  \n   \u2022 Fill a clear plastic bottle with water.  \n   \u2022 Place the bottle in direct sunlight for **6 hours** (or **2 days** if cloudy).  \n   \u2022 This method is only effective for clear water in strong sunlight.\n\n3. **Store and handle the treated water safely**  \n   \u2022 Keep the water in a clean, sealed container.  \n   \u2022 Re\u2011treat if the water becomes cloudy or if you suspect contamination.\n\n**Summary**  \n- Boil for 1\u20133\u202fminutes (depending on elevation).  \n- Filter (commercial or improvised) and then treat chemically or boil.  \n- Use iodine tablets or bleach for clear water, waiting 30\u202fminutes.  \n- Solar disinfection requires clear water, direct sunlight, and 6\u202fhours (or 2\u202fdays if cloudy).  \n- Always check for contamination signs before treating.",
+    "sources": [
+      "C:/RAG Uni Test\\Knowledge\\water_purification.txt"
+    ],
+    "rating": "positive"
   }
 ]
