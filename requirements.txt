@@ -1,0 +1,21 @@
+# Libby V13 — Required Libraries
+# Install all dependencies with: pip install -r requirements.txt
+
+# Core RAG pipeline
+chromadb
+sentence-transformers
+requests
+
+# File reading
+openpyxl
+pymupdf
+pandas
+
+# Report writing
+xlsxwriter
+
+# UI image handling (optional — graceful fallback if missing)
+Pillow
+
+# Live file monitoring (optional — graceful fallback if missing)
+watchdog
