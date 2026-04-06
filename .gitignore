@@ -1,3 +1,22 @@
 rag_db/ 
 __pycache__/ 
 *.pyc 
+
+# ChromaDB databases
+rag_db/
+libby_db/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# User data — never pushed to GitHub
+libby_config.json
+feedback_log.json
+libby_eval_set.json
+
+# Ruff cache
+.ruff_cache/
+
+# Archive folder — kept locally only
+archive/
