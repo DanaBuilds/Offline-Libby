@@ -4,7 +4,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.14-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
-![Version](https://img.shields.io/badge/Version-V13-brightgreen)
+![Version](https://img.shields.io/badge/Version-V16-brightgreen)
 ![Offline](https://img.shields.io/badge/Mode-Fully%20Offline-orange)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 
@@ -12,19 +12,66 @@
 
 ## What is Libby?
 
-Libby is a fully offline, air-gapped AI assistant built in Python. She answers questions from a local knowledge base of `.txt`, `.xlsx` and `.pdf` files using RAG (Retrieval Augmented Generation). No internet required after initial setup.
+Libby is a fully offline, air-gapped AI assistant built in Python. She answers questions from a local knowledge base using RAG (Retrieval Augmented Generation). No internet required after initial setup.
 
 Libby is designed to be deployed anywhere — a desktop PC, a mini PC, a Raspberry Pi, or a solar-powered handheld device — with zero cloud dependency and zero data leaving your machine.
 
+As of V14, Libby works as a two-component system:
+
+| Component | File | Role |
+|---|---|---|
+| **Libby** | `libby_V16.py` | The AI chat interface — asks questions, retrieves answers |
+| **Up** | `Up_V2.py` | The document mirror engine — converts source files into clean `.txt` copies |
+
+Up runs automatically in the background whenever Libby starts. You never need to run it manually.
+
 ---
 
-## ✨ What's New in V13
+## ✨ What's New in V16
 
-- **Pillow splash screen** — branded charcoal and rose gold startup screen on launch
-- **Pillow sidebar logo** — rose gold book icon rendered at the top of the sidebar
-- **xlsxwriter report engine** — Excel reports upgraded with richer styling and auto-generated rose gold bar charts
-- **ruff linting** — `ruff.toml` config added for code quality scanning
-- **Input focus fix** — resolved splash screen grab that was blocking the input box
+- **Multiple knowledge source folders** — add as many source folders as you like via Settings
+- **Shared mirror** — all folders sync into a single `_libby_mirror/` next to `libby_V16.py`, Libby searches across everything in one pass
+- **Scrollable Settings panel** — Settings window now scrolls cleanly regardless of screen size
+- **MCP feedback loop fix** — watcher pauses during Up sync to prevent repeated re-indexing
+
+---
+
+## ✨ Recent Version Highlights
+
+**V15**
+- Single **Ask Libby** tab — Knowledge Assistant and Enterprise BI merged; Libby auto-detects the question mode internally
+- Scrollable 15-line message bubbles for long answers
+- Sidebar logo and splash screen fully theme-aware (dark and light)
+
+**V14**
+- **Up integration** — Libby reads only from `_libby_mirror/`, Up handles all file conversion
+- `source_folder` config key — Libby derives the mirror path automatically
+- MCP watcher moved to monitor the mirror folder
+
+---
+
+## 🏗️ Architecture
+
+```
+Source Folders (your documents)
+  C:\RAG Test\          C:\Knowledge\
+       │                      │
+       └──────────┬───────────┘
+                  ▼
+            Up_V2.py (sync engine)
+            Converts .pdf .xlsx .docx .txt → clean .txt
+                  │
+                  ▼
+         C:\Libby\_libby_mirror\
+           (shared mirror — all folders merged)
+                  │
+                  ▼
+            libby_V16.py
+            ChromaDB indexes .txt files
+            Ollama answers questions
+```
+
+Originals are **never touched**. Up maintains a SQLite index (`up_index.db`) tracking every file's hash, sync status, and full section → chunk → sentence hierarchy.
 
 ---
 
@@ -35,26 +82,6 @@ Libby is designed to be deployed anywhere — a desktop PC, a mini PC, a Raspber
 - 16GB RAM minimum (32GB recommended for larger knowledge bases)
 - 20GB free disk space
 - Internet connection for initial setup only
-
----
-
-## 🗂️ Folder Structure
-
-Create a folder anywhere on your computer for your knowledge base. Libby will find all supported files automatically, no matter how deep the subfolders go.
-
-```
-C:\My Knowledge\
-  ├── Health\
-  │     ├── first_aid_basics.txt
-  │     └── medication_guide.pdf
-  ├── Business\
-  │     ├── sales_data.xlsx
-  │     └── inventory.xlsx
-  └── Survival\
-        └── water_purification.txt
-```
-
-Libby auto-creates a `libby_db` folder inside your knowledge folder to store her vector database. You never need to touch it.
 
 ---
 
@@ -78,10 +105,12 @@ You should see something like `Python 3.14.0`
 
 Open PowerShell and run:
 ```
-pip install chromadb sentence-transformers openpyxl pymupdf requests pandas xlsxwriter Pillow watchdog
+pip install chromadb sentence-transformers openpyxl pymupdf requests pandas xlsxwriter Pillow watchdog python-docx
 ```
 
 This may take a few minutes. Wait for it to finish before moving on.
+
+> **Note:** `python-docx` is new in V14 — required for Up to convert `.docx` files.
 
 ---
 
@@ -102,45 +131,42 @@ ollama --version
 
 ## 🧠 Step 4 — Download an AI Model
 
-Libby works with any Ollama-compatible LLM (Large Language Model). The current recommended model is `llama3.2`.
-
 ```
-ollama pull llama3.2
+ollama pull gpt-oss:20b
 ```
 
-This downloads approximately 2GB. This is the **last time you need internet** for Libby to work.
-
-**Other supported models:**
+**Supported models:**
 
 | Model | Size | Notes |
 |---|---|---|
-| `llama3.2` | ~2GB | Recommended — great balance of speed and quality |
-| `gpt-oss:20b` | ~12GB | Most capable — requires 32GB RAM |
+| `gpt-oss:20b` | ~12GB | Recommended — most capable, requires 32GB RAM |
+| `llama3.2` | ~2GB | Good balance of speed and quality |
 | `llama3.1:8b` | ~5GB | Good mid-range option |
 | `mistral` | ~4GB | Fast and reliable |
 | `phi3:mini` | ~2GB | Lightweight — good for lower RAM machines |
 
-You can change the active model at any time in Libby's Settings panel without reinstalling anything.
+You can change the active model at any time in Libby's Settings panel.
 
 ---
 
 ## 📄 Step 5 — Add Your Knowledge Files
 
-Place your files inside your knowledge folder in any structure you like.
+Place your files in any folder on your machine. Libby supports multiple source folders — you can add them all in Settings.
 
-**Supported file types:**
+**Supported file types (converted by Up):**
 
-| Type | Icon | Best For |
-|---|---|---|
-| `.txt` | 📄 | Notes, guides, manuals, written knowledge |
-| `.xlsx` | 📊 | Business data, spreadsheets, sales, inventory |
-| `.pdf` | 📕 | Reports, documents, reference material |
+| Type | Best For |
+|---|---|
+| `.txt` | Notes, guides, manuals, written knowledge |
+| `.xlsx` | Business data, spreadsheets, sales, inventory |
+| `.pdf` | Reports, documents, reference material |
+| `.docx` | Word documents, policies, procedures |
 
 **Tips for best results:**
 - Use clear descriptive filenames — Libby cites filenames in her answers
-- Organise files into subfolders by topic
+- Organise files into subfolders by topic — subfolder names become searchable tags
 - Excel files work best with clear column headers in row 1
-- PDFs must be text-based (not scanned images) — OCR support coming in a future version
+- PDFs must be text-based (not scanned images)
 
 ---
 
@@ -149,71 +175,67 @@ Place your files inside your knowledge folder in any structure you like.
 In PowerShell, navigate to your Libby folder and run:
 ```
 cd C:\Libby
-python libby_V13.py
+python libby_V16.py
 ```
 
-On first launch Libby will index all your files and display a splash screen. Indexing may take a minute depending on how many files you have. Subsequent launches are much faster.
+On first launch:
+1. Up syncs all configured source folders into `_libby_mirror/`
+2. Libby indexes the mirror into ChromaDB
+3. The splash screen appears while loading
+
+Subsequent launches are much faster — Up only processes changed files.
 
 ---
 
 ## ⚙️ Step 7 — Configure Your Settings
 
-Click **⚙ Settings** in the top right corner to configure:
+Click **⚙ Settings** in the top right corner.
 
 | Setting | What it does |
 |---|---|
-| **Knowledge Folder** | Point Libby at your files — click Browse to select any folder |
+| **Knowledge Source Folders** | Add/remove source folders — Up syncs all of them |
 | **Theme** | Switch between Dark Mode (charcoal) and Light Mode (warm linen) |
 | **Company Name** | Personalise the header and exported reports |
 | **AI Model** | Switch between installed Ollama LLMs |
 
-Click **Save & Apply** — changes take effect immediately, no restart needed.
+Click **Save & Apply** — Up syncs immediately, Libby reloads from the mirror.
 
-When you change the knowledge folder Libby automatically clears her database and rebuilds from the new location.
+To add a new source folder: click **+ Add Folder**, select it, click Save & Apply. Up converts it automatically.
 
 ---
 
 ## 💬 How to Use Libby
 
-### 📚 Knowledge Assistant Tab
+### 💬 Ask Libby Tab
 
-Ask questions in plain English from your loaded documents:
+Ask anything in plain English — Libby automatically detects whether your question is a knowledge question or a data question and switches mode internally.
 
+**Knowledge questions:**
 ```
 How do I treat a second degree burn?
 What foods have the longest shelf life?
 How long should I boil water to purify it?
 ```
 
-Libby answers using only what is in your knowledge base — never guessing or using outside information.
-
-### 📊 Enterprise BI Tab
-
-Ask data questions from your Excel files:
-
+**Data questions (auto-detected):**
 ```
 What is the total salary budget?
 Which product has the highest profit margin?
-Which customers are on hold?
 What is the average revenue per sales rep?
 ```
 
-Libby performs real calculations using your actual data and cites the source file.
+**Generating reports:**
 
-### 📊 Generating Reports
-
-In the Enterprise BI tab, start your message with **"generate report"**:
-
+Start your message with **"generate report"**:
 ```
 generate report showing sales by region highest to lowest
 generate report of inventory items lowest to highest stock
-generate report of active customers by outstanding balance
 generate report showing employees by salary highest to lowest
 ```
 
-A save dialog opens — choose where to save your Excel report. Libby builds a fully formatted report with:
+A save dialog opens. Libby builds a fully formatted Excel report with:
 - Company header in charcoal and rose gold branding
-- Sorted and grouped data rows with alternating row colours
+- Sorted and grouped data rows with alternating colours
 - Currency formatting on financial columns
 - Totals row
 - Auto-generated rose gold bar chart
@@ -225,39 +247,53 @@ Every Libby response has thumbs up / thumbs down buttons. Ratings are saved to `
 
 ---
 
-## 🗂️ Tab System
+## 🔁 Up — Document Mirror Engine
 
-Libby has three tabs, each with independent state:
+Up (`Up_V2.py`) runs automatically as part of Libby. It can also be run standalone from the terminal:
 
-| Tab | Purpose |
-|---|---|
-| 📚 Knowledge Assistant | Document Q&A from your knowledge base |
-| 📊 Enterprise BI | Data questions, calculations and report generation |
-| 🧪 Evaluation | Developer tool for accuracy testing — not end user facing |
+```
+python Up_V2.py "C:\path\to\your\folder"
+```
 
-- Each tab keeps its own separate conversation history
-- A dot indicator (●) appears on inactive tabs that have conversation history
-- The **Clear** button only clears the active tab
-- History resets when you close Libby (persistent history coming in a future version)
+Output example:
+```
+Up  —  syncing: C:\RAG Test
+Mirror: C:\RAG Test\_libby_mirror
+
+  ➕  [added]  budget.xlsx
+  🔄  [updated]  notes.txt
+
+✅  Added:    1
+🔄  Updated:  1
+📦  Archived: 0
+⏭   Skipped:  11
+
+Index: 12 docs  •  54 sections  •  183 chunks  •  1,204 sentences
+```
+
+**How Up works:**
+- Scans source folders for `.txt`, `.pdf`, `.xlsx`, `.docx` files
+- Converts each to a clean `.txt` with a provenance header
+- Uses SHA-256 hashing — only re-converts files that actually changed
+- Deleted source files → mirror copy moved to `_archive/` with a timestamp
+- Builds a SQLite index with a full document → section → chunk → sentence hierarchy
+- Infers tags from filenames and subfolder names automatically
 
 ---
 
 ## 🔁 MCP — Live File Monitoring
 
-Libby includes a Model Context Protocol (MCP) layer powered by `watchdog` that monitors your knowledge folder in real time:
+Libby includes a Model Context Protocol (MCP) layer powered by `watchdog` that monitors `_libby_mirror/` in real time:
 
-- Detects when files are **added, modified, deleted or renamed**
-- Auto re-indexes the knowledge base without restarting
-- 2 second debounce prevents duplicate events
-- Sends a notification message in the chat when files change
-- Restarts automatically when you change the knowledge folder in Settings
+- Detects when Up writes new or updated `.txt` files to the mirror
+- Auto re-indexes ChromaDB without restarting Libby
+- 8 second debounce prevents duplicate events
+- Watcher pauses during Up sync to prevent feedback loops
 - Graceful fallback if watchdog is not installed
-
-To add new files to Libby on a deployment device — simply copy files via USB stick into the knowledge folder. MCP handles the rest automatically.
 
 ---
 
-## 🧪 Evaluation Function
+## 🧪 Evaluation Tab
 
 The Evaluation tab is a developer tool for testing Libby's accuracy:
 
@@ -267,6 +303,8 @@ The Evaluation tab is a developer tool for testing Libby's accuracy:
 - Per-question ✅ ❌ display with live progress counter
 - Final score with colour coding — green 70%+, amber 40%+, red below 40%
 - Test cases saved persistently in `libby_eval_set.json`
+
+> **Note:** Make sure your eval questions match the content in your loaded knowledge base.
 
 ---
 
@@ -288,9 +326,9 @@ After initial setup Libby never needs an internet connection.
 ## 🛠️ Troubleshooting
 
 **Libby shows "0 chunks" or files are missing:**
-- Make sure your files are inside the selected knowledge folder
-- Delete the `libby_db` folder inside your knowledge folder and restart
-- Check that your files are `.txt`, `.xlsx` or `.pdf` format
+- Open Settings, confirm your source folders are listed, click Save & Apply
+- Delete `C:\Libby\_libby_mirror\libby_db\` and restart Libby to force a full rebuild
+- Check that your files are a supported type (`.txt`, `.xlsx`, `.pdf`, `.docx`)
 
 **"Ollama not running" error:**
 - Open a new PowerShell window and type: `ollama serve`
@@ -301,16 +339,15 @@ After initial setup Libby never needs an internet connection.
 - Make sure the file is not open in another program when Libby starts
 - Check that row 1 contains column headers
 
-**Input box not responding after startup:**
-- Wait for the splash screen to fully close before clicking
-- If still frozen restart Libby — this was fixed in V13
+**MCP keeps re-indexing in a loop:**
+- This was fixed in V16 — update to the latest version
 
 **ModuleNotFoundError on launch:**
-- Run: `pip install xlsxwriter Pillow watchdog`
+- Run: `pip install xlsxwriter Pillow watchdog python-docx`
 - All libraries must be installed before running Libby
 
 **ruff not recognised as a command:**
-- Use `python -m ruff check libby_V13.py` instead
+- Use `python -m ruff check libby_V16.py` instead
 - Make sure you are in the `C:\Libby` directory first
 
 ---
@@ -329,21 +366,26 @@ After initial setup Libby never needs an internet connection.
 | xlsxwriter | latest |
 | Pillow | latest |
 | watchdog | latest |
+| python-docx | latest |
 | Ollama | latest |
-| Recommended LLM | llama3.2 (~2GB) |
+| Recommended LLM | gpt-oss:20b (~12GB) |
 
 ---
 
 ## 📁 Auto-Generated Files
 
-Libby creates these automatically — you never need to edit them:
+Libby and Up create these automatically — you never need to edit them:
 
-| File | Purpose |
+| File / Folder | Purpose |
 |---|---|
 | `libby_config.json` | Saves your settings between sessions |
 | `feedback_log.json` | Audit trail of every interaction and rating |
 | `libby_eval_set.json` | Saved evaluation test cases |
-| `libby_db/` | ChromaDB vector database — stores your indexed knowledge |
+| `_libby_mirror/` | Shared mirror — all source folders merged here |
+| `_libby_mirror/libby_db/` | ChromaDB vector database |
+| `source_folder/_libby_mirror/` | Per-folder mirror managed by Up |
+| `source_folder/_libby_mirror/up_index.db` | Up's SQLite document index |
+| `source_folder/_libby_mirror/_archive/` | Archived mirrors of deleted source files |
 
 ---
 
@@ -355,11 +397,12 @@ Libby creates these automatically — you never need to edit them:
 - [ ] Deploy to offline hardware (Raspberry Pi / Mini PC)
 - [ ] Solar power integration for true off-grid use
 - [ ] OCR support for scanned PDFs (pytesseract)
-- [ ] Persistent conversation history between sessions (sqlite3)
+- [ ] Persistent conversation history between sessions
 - [ ] Flashcard and quiz mode for personal knowledge base
 - [ ] Cybersecurity layer — encryption (Fernet), bandit scanning
 - [ ] Cloud / ERP connector (connection-optional architecture)
-- [ ] Word document `.docx` support
+- [ ] Outlook `.msg` file support (extract-msg)
+- [ ] Wing-based topic routing (V17)
 
 ---
 
@@ -379,10 +422,13 @@ Libby creates these automatically — you never need to edit them:
 | V10 | MCP file watcher, live auto re-indexing, watchdog integration |
 | V11 | Evaluation tab, keyword scoring, libby_eval_set.json |
 | V12 | gpt-oss:20b LLM upgrade, config refinements |
-| **V13** | **Pillow splash screen + sidebar logo, xlsxwriter reports with charts, ruff linting** |
+| V13 | Pillow splash screen + sidebar logo, xlsxwriter reports with charts, ruff linting |
+| V14 | Up integration, mirror architecture, source_folder config, MCP watches mirror |
+| V15 | Single Ask Libby tab, auto mode detection, scrollable bubbles, theme-aware logo |
+| **V16** | **Multi-folder support, shared mirror, scrollable Settings, MCP feedback loop fix** |
 
 ---
 
-*Built with Python, ChromaDB, Ollama, sentence-transformers, Pillow and xlsxwriter*
+*Built with Python, ChromaDB, Ollama, sentence-transformers, Pillow, xlsxwriter and python-docx*
 *Designed for offline, air-gapped environments*
 *Created by DanaBuilds — github.com/DanaBuilds/Offline-Libby*

@@ -37,12 +37,22 @@ except ImportError:
 SCRIPT_DIR     = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE    = os.path.join(SCRIPT_DIR, "libby_config.json")
 DEFAULT_CONFIG = {
-    "base_path":    SCRIPT_DIR,
-    "theme":        "dark",
-    "mode":         "knowledge",
-    "company_name": "Libby Intelligence",
-    "ollama_model": "gpt-oss:20b",
+    "source_folders": [],          # V16: list of source folder paths
+    "source_folder":  SCRIPT_DIR,  # legacy — kept for migration only
+    "base_path":      "",          # V16: always SCRIPT_DIR/_libby_mirror
+    "theme":          "dark",
+    "mode":           "knowledge",
+    "company_name":   "Libby Intelligence",
+    "ollama_model":   "gpt-oss:20b",
 }
+
+def mirror_path_from_source(source_folder: str) -> str:
+    """Legacy single-folder helper — kept for Up sync calls."""
+    return os.path.join(source_folder, "_libby_mirror")
+
+def shared_mirror_path() -> str:
+    """V16: shared mirror always lives next to the script."""
+    return os.path.join(SCRIPT_DIR, "_libby_mirror")
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -54,10 +64,19 @@ def load_config():
             # Always respect the code default for ollama_model
             if cfg.get("ollama_model") in ["phi3:mini", "llama3.2"]:
                 cfg["ollama_model"] = DEFAULT_CONFIG["ollama_model"]
+            # V14: migrate old configs that only have base_path
+            # V16: migrate single source_folder → source_folders list
+            if "source_folders" not in cfg or not cfg["source_folders"]:
+                legacy = cfg.get("source_folder", "")
+                cfg["source_folders"] = [legacy] if legacy and os.path.exists(legacy) else []
+            # V16: shared mirror always next to the script
+            cfg["base_path"] = shared_mirror_path()
             return cfg
         except Exception:
             pass
-    return DEFAULT_CONFIG.copy()
+    cfg = DEFAULT_CONFIG.copy()
+    cfg["base_path"] = shared_mirror_path()
+    return cfg
 
 def save_config(cfg):
     with open(CONFIG_FILE, "w") as f:
@@ -281,7 +300,8 @@ def chunk_text(text, chunk_size=1200, overlap=150):
 # ─────────────────────────────────────────────
 # MCP — FILE WATCHER (V10)
 # ─────────────────────────────────────────────
-SUPPORTED_EXTENSIONS = {".txt", ".xlsx", ".pdf"}
+# V14: Libby watches the mirror folder — Up writes .txt files there
+SUPPORTED_EXTENSIONS = {".txt"}
 
 class LibbyMCPHandler(FileSystemEventHandler):
     """
@@ -295,14 +315,15 @@ class LibbyMCPHandler(FileSystemEventHandler):
         self._debounce_timer = None
 
     def _is_relevant(self, path):
-        ext = os.path.splitext(path)[1].lower()
+        ext      = os.path.splitext(path)[1].lower()
         basename = os.path.basename(path)
         return (
             ext in SUPPORTED_EXTENSIONS
-            and not basename.startswith("libby")
             and not basename.startswith("~")
-            and "libby_db" not in path
+            and "libby_db"    not in path
+            and "_archive"    not in path   # V14: never re-index archived files
             and "__pycache__" not in path
+            and "up_index"    not in path   # V14: ignore Up's SQLite DB
         )
 
     def _trigger(self, event_type, path):
@@ -314,7 +335,7 @@ class LibbyMCPHandler(FileSystemEventHandler):
         if self._debounce_timer:
             self._debounce_timer.cancel()
         self._debounce_timer = threading.Timer(
-            2.0, self.on_change, args=[event_type, path]
+            8.0, self.on_change, args=[event_type, path]
         )
         self._debounce_timer.start()
 
@@ -379,6 +400,11 @@ collection  = None
 known_files = []
 
 def load_backend(base_path, fresh=False):
+    """
+    V14: base_path is always _libby_mirror/.
+    Reads .txt files only — Up handles all conversion upstream.
+    Skips _archive/ subfolder (deleted originals, not for retrieval).
+    """
     global rag_model, collection, known_files
     known_files = []
     dataframes.clear()
@@ -397,45 +423,34 @@ def load_backend(base_path, fresh=False):
     existing_ids = set(collection.get()["ids"])
     new_chunks, new_embeddings, new_ids, new_metadata = [], [], [], []
     for root, dirs, files in os.walk(base_path):
-        dirs[:] = [d for d in dirs if d not in ["libby_db","__pycache__"]]
+        # V14: skip archive and chromadb folders
+        dirs[:] = [d for d in dirs if d not in ["libby_db", "__pycache__", "_archive"]]
         for file in files:
-            if file.startswith("libby") or file == "libby_config.json": continue
+            if not file.endswith(".txt"): continue
+            if file.startswith("up_") or file == "libby_config.json": continue
             filepath = os.path.join(root, file)
-            if file.endswith(".txt"):
-                try:
-                    with open(filepath, "r", encoding="utf-8") as f: content = f.read()
-                    file_type = "txt"
-                except: continue
-            elif file.endswith(".xlsx"):
-                try:
-                    content = read_excel_text(filepath)
-                    file_type = "xlsx"
-                    load_excel_as_dataframe(filepath)
-                except: continue
-            elif file.endswith(".pdf"):
-                try:
-                    content = read_pdf(filepath)
-                    file_type = "pdf"
-                    if not content.strip(): continue
-                except: continue
-            else: continue
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    content = f.read()
+                if not content.strip(): continue
+            except: continue
             for i, chunk in enumerate(chunk_text(content)):
                 chunk_id = f"{filepath}::chunk{i}"
                 if chunk_id in existing_ids: continue
                 new_chunks.append(chunk)
                 new_ids.append(chunk_id)
                 new_metadata.append({"source": filepath, "chunk_index": i,
-                                     "filename": file, "file_type": file_type})
+                                     "filename": file, "file_type": "txt"})
     if new_chunks:
         new_embeddings = rag_model.encode(new_chunks).tolist()
         collection.add(documents=new_chunks, embeddings=new_embeddings,
                        ids=new_ids, metadatas=new_metadata)
     for m in collection.get(include=["metadatas"])["metadatas"]:
-        src = m.get("source","")
-        if src and src not in [f["source"] for f in known_files]:
-            known_files.append({"source": src,
-                                "filename": m.get("filename", os.path.basename(src)),
-                                "file_type": m.get("file_type","txt")})
+        s = m.get("source","")
+        if s and s not in [f["source"] for f in known_files]:
+            known_files.append({"source": s,
+                                "filename": m.get("filename", os.path.basename(s)),
+                                "file_type": "txt"})
 
 def retrieve(question):
     if not collection: return []
@@ -889,7 +904,7 @@ class LibbyApp:
         self.cfg            = load_config()
         self.T              = THEMES[self.cfg["theme"]]
         self.current_theme  = self.cfg["theme"]
-        self.active_tab     = "knowledge"   # currently visible tab
+        self.active_tab     = "chat"   # V15: single chat tab
         self.ready          = False
         self.dot_count      = 0
         self.animating      = False
@@ -897,13 +912,9 @@ class LibbyApp:
         self._settings_open = False
 
         # ── Each tab has its own independent state ──
+        # V15: knowledge + ebi merged into single "chat" tab with auto-detection
         self.tabs = {
-            "knowledge": {
-                "widgets":  [],
-                "history":  [],
-                "has_msgs": False,
-            },
-            "ebi": {
+            "chat": {
                 "widgets":  [],
                 "history":  [],
                 "has_msgs": False,
@@ -915,14 +926,17 @@ class LibbyApp:
             }
         }
 
-        self.root.title("Libby V13 — Universal Knowledge System")
+        self.root.title("Libby V16 — Universal Knowledge System")
         self.root.geometry("1240x820")
         self.root.minsize(900, 640)
         self.root.configure(bg=self.T["BG_DARK"])
 
-        # ── MCP file watcher ──
+        # ── MCP file watcher — V16: watches shared mirror ──
+        mirror = shared_mirror_path()
+        self.cfg["base_path"] = mirror
+        os.makedirs(mirror, exist_ok=True)
         self.mcp = LibbyMCP(
-            folder_path=self.cfg["base_path"],
+            folder_path=mirror,
             on_change_callback=self._on_mcp_file_change
         )
 
@@ -1086,7 +1100,7 @@ class LibbyApp:
         self.footer_label.pack()
 
         # Show welcome message in active tab
-        self._add_libby_message(self._welcome_message(), source=None, file_type=None)
+        self._add_libby_message(self._welcome_message(), source=None, file_type=None, scrollable=False)
 
     # ─────────────────────────────────────────
     # TAB BAR
@@ -1096,10 +1110,10 @@ class LibbyApp:
         for w in self.tab_bar.winfo_children():
             w.destroy()
 
+        # V15: single chat tab — mode auto-detected per question
         tabs_def = [
-            ("knowledge", "📚  Knowledge Assistant"),
-            ("ebi",       "📊  Enterprise BI"),
-            ("eval",      "🧪  Evaluation"),
+            ("chat", "💬  Ask Libby"),
+            ("eval", "🧪  Evaluation"),
         ]
 
         for tab_id, label in tabs_def:
@@ -1161,15 +1175,9 @@ class LibbyApp:
         self.active_tab = tab_id
         self._build_tab_bar()
 
-        # Update send button label
-        self.send_btn.config(
-            text="Ask Libby" if tab_id == "knowledge" else
-            "Query"        if tab_id == "ebi"       else
-            "—"
-        )
-        self.send_btn.config(
-            state="disabled" if tab_id == "eval" else "normal"
-        )
+        # V15: only eval tab disables the send button
+        self.send_btn.config(text="Ask Libby")
+        self.send_btn.config(state="disabled" if tab_id == "eval" else "normal")
         self._set_placeholder()
 
         # Reload the other tab's chat
@@ -1197,7 +1205,7 @@ class LibbyApp:
                 else:
                     self._draw_libby_bubble(text, source, file_type)
         else:
-            self._draw_libby_bubble(self._welcome_message(), None, None)
+            self._draw_libby_bubble(self._welcome_message(), None, None, scrollable=False)
 
     # ─────────────────────────────────────────
     # EVALUATION PANEL (V11)
@@ -1424,7 +1432,13 @@ class LibbyApp:
 
         self.path_label = tk.Label(
             self.sb_header,
-            text=f"📂  {os.path.basename(self.cfg['base_path'])}",
+            text=(
+                f"📂  {os.path.basename(self.cfg['source_folders'][0])}"
+                if len(self.cfg.get("source_folders", [])) == 1
+                else f"📂  {len(self.cfg.get('source_folders', []))} folders"
+                if self.cfg.get("source_folders")
+                else "📂  No folders set"
+            ),
             bg=T["BG_SIDEBAR"], fg=T["TEXT_DIM"],
             font=F_TINY, wraplength=200, justify="left"
         )
@@ -1460,7 +1474,7 @@ class LibbyApp:
 
         tk.Frame(self.sidebar, bg=T["BORDER"], height=1).pack(fill="x", padx=8)
         self.sidebar_footer_label = tk.Label(
-            self.sidebar, text="📄 txt   📊 xlsx   📕 pdf",
+            self.sidebar, text="📄 txt  •  powered by Up",
             bg=T["BG_SIDEBAR"], fg=T["TEXT_DIM"],
             font=F_TINY, pady=6
         )
@@ -1513,73 +1527,117 @@ class LibbyApp:
         self.root.update_idletasks()
         rx = self.root.winfo_x() + (self.root.winfo_width()  // 2) - 220
         ry = self.root.winfo_y() + (self.root.winfo_height() // 2) - 180
-        self.settings_win.geometry(f"440x440+{rx}+{ry}")
+        self.settings_win.geometry(f"460x500+{rx}+{ry}")
 
-        p = tk.Frame(self.settings_win, bg=T["BG_SETTINGS"])
-        p.pack(fill="both", expand=True, padx=24, pady=20)
+        # V16: scrollable settings window
+        outer = tk.Frame(self.settings_win, bg=T["BG_SETTINGS"])
+        outer.pack(fill="both", expand=True)
+        s_canvas = tk.Canvas(outer, bg=T["BG_SETTINGS"], highlightthickness=0, bd=0)
+        s_scroll = tk.Scrollbar(outer, orient="vertical", command=s_canvas.yview)
+        s_canvas.configure(yscrollcommand=s_scroll.set)
+        s_scroll.pack(side="right", fill="y")
+        s_canvas.pack(side="left", fill="both", expand=True)
+        p = tk.Frame(s_canvas, bg=T["BG_SETTINGS"])
+        p_window = s_canvas.create_window((0, 0), window=p, anchor="nw")
+        def _on_settings_configure(e):
+            s_canvas.configure(scrollregion=s_canvas.bbox("all"))
+        def _on_canvas_resize(e):
+            s_canvas.itemconfig(p_window, width=e.width)
+        p.bind("<Configure>", _on_settings_configure)
+        s_canvas.bind("<Configure>", _on_canvas_resize)
+        s_canvas.bind("<Enter>", lambda e: s_canvas.bind_all(
+            "<MouseWheel>", lambda ev: s_canvas.yview_scroll(int(-1*(ev.delta/120)), "units")))
+        s_canvas.bind("<Leave>", lambda e: s_canvas.unbind_all("<MouseWheel>"))
+        # inner padding frame
+        p = tk.Frame(p, bg=T["BG_SETTINGS"], padx=24, pady=20)
+        p.pack(fill="both", expand=True)
 
         tk.Label(p, text="Settings", bg=T["BG_SETTINGS"], fg=T["ACCENT"],
                  font=("Segoe UI", 14, "bold")).grid(
                      row=0, column=0, columnspan=3, sticky="w", pady=(0, 16))
 
-        tk.Label(p, text="Knowledge Folder", bg=T["BG_SETTINGS"],
+        # V16: multi-folder list
+        tk.Label(p, text="Knowledge Source Folders", bg=T["BG_SETTINGS"],
                  fg=T["TEXT_MAIN"], font=F_LABEL_B).grid(
                      row=1, column=0, columnspan=3, sticky="w", pady=(0, 4))
-        self.folder_var = tk.StringVar(value=self.cfg["base_path"])
-        tk.Entry(p, textvariable=self.folder_var, bg=T["BG_INPUT"],
-                 fg=T["TEXT_MAIN"], insertbackground=T["ACCENT"],
-                 font=F_SMALL, relief="flat", width=30).grid(
-                     row=2, column=0, columnspan=2, sticky="w", ipady=4, pady=(0, 14))
-        tk.Button(p, text="Browse", bg=T["ACCENT_DIM"], fg=T["TEXT_MAIN"],
-                  font=F_BTN_SM, relief="flat", padx=8, cursor="hand2",
-                  command=self._browse_folder).grid(
-                      row=2, column=2, sticky="w", padx=(6,0), pady=(0,14))
+        list_frame = tk.Frame(p, bg=T["BG_SETTINGS"])
+        list_frame.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(0, 4))
+        self.folders_listbox = tk.Listbox(
+            list_frame, bg=T["BG_INPUT"], fg=T["TEXT_MAIN"],
+            font=F_SMALL, relief="flat", height=4,
+            selectbackground=T["ACCENT_DIM"], selectforeground=T["TEXT_MAIN"],
+            activestyle="none"
+        )
+        self.folders_listbox.pack(side="left", fill="x", expand=True)
+        sb_f = tk.Scrollbar(list_frame, command=self.folders_listbox.yview,
+                            relief="flat", width=10)
+        sb_f.pack(side="right", fill="y")
+        self.folders_listbox.configure(yscrollcommand=sb_f.set)
+        for f in self.cfg.get("source_folders", []):
+            self.folders_listbox.insert("end", f)
+        btn_row = tk.Frame(p, bg=T["BG_SETTINGS"])
+        btn_row.grid(row=3, column=0, columnspan=3, sticky="w", pady=(0, 4))
+        tk.Button(btn_row, text="+ Add Folder",
+                  bg=T["ACCENT_DIM"], fg=T["TEXT_MAIN"],
+                  font=F_BTN_SM, relief="flat", padx=10, pady=3,
+                  cursor="hand2",
+                  command=self._settings_add_folder).pack(side="left", padx=(0,6))
+        tk.Button(btn_row, text="− Remove Selected",
+                  bg=T["BTN_CLEAR"], fg=T["BTN_CLEAR_FG"],
+                  font=F_BTN_SM, relief="flat", padx=10, pady=3,
+                  cursor="hand2",
+                  command=self._settings_remove_folder).pack(side="left")
+        tk.Label(p,
+                 text=f"Mirror: {shared_mirror_path()}  •  managed by Up",
+                 bg=T["BG_SETTINGS"], fg=T["TEXT_DIM"],
+                 font=("Segoe UI", 7, "italic")).grid(
+                     row=4, column=0, columnspan=3, sticky="w", pady=(0, 10))
 
         tk.Label(p, text="Theme", bg=T["BG_SETTINGS"],
                  fg=T["TEXT_MAIN"], font=F_LABEL_B).grid(
-                     row=3, column=0, columnspan=3, sticky="w", pady=(0, 4))
+                     row=5, column=0, columnspan=3, sticky="w", pady=(0, 4))
         self.theme_var = tk.StringVar(value=self.cfg["theme"])
         tk.Radiobutton(p, text="🌙  Dark", variable=self.theme_var, value="dark",
                        bg=T["BG_SETTINGS"], fg=T["TEXT_MAIN"],
                        selectcolor=T["BG_INPUT"], activebackground=T["BG_SETTINGS"],
-                       font=F_LABEL).grid(row=4, column=0, sticky="w", pady=(0,14))
+                       font=F_LABEL).grid(row=6, column=0, sticky="w", pady=(0,14))
         tk.Radiobutton(p, text="☀️  Light", variable=self.theme_var, value="light",
                        bg=T["BG_SETTINGS"], fg=T["TEXT_MAIN"],
                        selectcolor=T["BG_INPUT"], activebackground=T["BG_SETTINGS"],
-                       font=F_LABEL).grid(row=4, column=1, sticky="w", pady=(0,14))
+                       font=F_LABEL).grid(row=6, column=1, sticky="w", pady=(0,14))
 
         tk.Label(p, text="Company Name", bg=T["BG_SETTINGS"],
                  fg=T["TEXT_MAIN"], font=F_LABEL_B).grid(
-                     row=5, column=0, columnspan=3, sticky="w", pady=(0,4))
+                     row=7, column=0, columnspan=3, sticky="w", pady=(0,4))
         self.company_var = tk.StringVar(value=self.cfg["company_name"])
         tk.Entry(p, textvariable=self.company_var, bg=T["BG_INPUT"],
                  fg=T["TEXT_MAIN"], insertbackground=T["ACCENT"],
                  font=F_LABEL, relief="flat", width=32).grid(
-                     row=6, column=0, columnspan=3, sticky="w", ipady=4, pady=(0,20))
+                     row=8, column=0, columnspan=3, sticky="w", ipady=4, pady=(0,20))
 
         tk.Frame(p, bg=T["BORDER"], height=1).grid(
-            row=7, column=0, columnspan=3, sticky="ew", pady=(0,14))
+            row=9, column=0, columnspan=3, sticky="ew", pady=(0,14))
 
         tk.Label(p, text="AI Model", bg=T["BG_SETTINGS"],
                  fg=T["TEXT_MAIN"], font=F_LABEL_B).grid(
-                     row=8, column=0, columnspan=3, sticky="w", pady=(0,4))
+                     row=10, column=0, columnspan=3, sticky="w", pady=(0,4))
         self.model_var = tk.StringVar(value=self.cfg.get("ollama_model","gpt-oss:20b"))
         model_options = ["gpt-oss:20b", "llama3.2", "mistral", "llama3.1:8b", "phi3:mini"]
         if self.model_var.get() not in model_options:
             model_options.insert(0, self.model_var.get())
         tk.OptionMenu(p, self.model_var, *model_options).grid(
-            row=9, column=0, columnspan=2, sticky="w", pady=(0,20))
+            row=11, column=0, columnspan=2, sticky="w", pady=(0,20))
 
         tk.Frame(p, bg=T["BORDER"], height=1).grid(
-            row=10, column=0, columnspan=3, sticky="ew", pady=(0,14))
+            row=12, column=0, columnspan=3, sticky="ew", pady=(0,14))
 
         tk.Button(p, text="Save & Apply", bg=T["ACCENT_DIM"], fg=T["TEXT_MAIN"],
                   activebackground=T["ACCENT"], font=F_BTN, relief="flat",
                   padx=16, pady=6, cursor="hand2",
-                  command=self._save_settings).grid(row=11, column=0, sticky="w")
+                  command=self._save_settings).grid(row=13, column=0, sticky="w")
         tk.Button(p, text="Cancel", bg=T["BG_INPUT"], fg=T["TEXT_DIM"],
                   font=F_BTN_SM, relief="flat", padx=12, pady=6, cursor="hand2",
-                  command=self._close_settings).grid(row=11, column=1, sticky="w", padx=(8,0))
+                  command=self._close_settings).grid(row=13, column=1, sticky="w", padx=(8,0))
 
     def _close_settings(self):
         self._settings_open = False
@@ -1588,39 +1646,56 @@ class LibbyApp:
             self.settings_win.destroy()
 
     def _browse_folder(self):
-        folder = filedialog.askdirectory(title="Select Knowledge Base Folder",
-                                         initialdir=self.cfg["base_path"])
-        if folder: self.folder_var.set(folder)
+        pass  # V16: replaced by _settings_add_folder
+
+    def _settings_add_folder(self):
+        folder = filedialog.askdirectory(title="Add Knowledge Source Folder")
+        if folder and folder not in self.folders_listbox.get(0, "end"):
+            self.folders_listbox.insert("end", folder)
+
+    def _settings_remove_folder(self):
+        sel = self.folders_listbox.curselection()
+        if sel:
+            self.folders_listbox.delete(sel[0])
 
     def _save_settings(self):
-        new_path    = self.folder_var.get().strip()
+        new_folders = list(self.folders_listbox.get(0, "end"))
         new_theme   = self.theme_var.get()
         new_company = self.company_var.get().strip() or "Libby Intelligence"
         new_model   = self.model_var.get().strip() or "gpt-oss:20b"
-        if not os.path.exists(new_path):
-            messagebox.showerror("Invalid Folder", f"Folder not found:\n{new_path}")
-            return
-        changed_path  = new_path  != self.cfg["base_path"]
-        changed_theme = new_theme != self.cfg["theme"]
-        self.cfg.update({"base_path": new_path, "theme": new_theme,
-                         "company_name": new_company, "ollama_model": new_model})
+        for f in new_folders:
+            if not os.path.exists(f):
+                messagebox.showerror("Invalid Folder", f"Folder not found:\n{f}")
+                return
+        new_mirror      = shared_mirror_path()
+        changed_folders = new_folders != self.cfg.get("source_folders", [])
+        changed_theme   = new_theme   != self.cfg["theme"]
+        self.cfg.update({
+            "source_folders": new_folders,
+            "base_path":      new_mirror,
+            "theme":          new_theme,
+            "company_name":   new_company,
+            "ollama_model":   new_model,
+        })
         save_config(self.cfg)
         self._close_settings()
         if changed_theme:
             self.current_theme = new_theme
             self.T = THEMES[new_theme]
             self._apply_theme()
+        n     = len(new_folders)
+        label = os.path.basename(new_folders[0]) if n == 1 else f"{n} folders"
+        self.path_label.config(text=f"📂  {label}")
         self.company_label.config(text=new_company)
-        self.path_label.config(text=f"📂  {os.path.basename(new_path)}")
-        if changed_path:
+        if changed_folders:
             self.ready = False
             for w in self.sidebar_list.winfo_children():
                 w.destroy()
-            self.status_label.config(text="⏳  Reloading...", fg=self.T["WARNING"])
-            self._add_libby_message(f"Knowledge folder updated.\nLoading: {new_path}",
-                                    source=None, file_type=None)
-            self.mcp.restart(new_path)
-            self._start_backend(fresh=True)
+            self.status_label.config(text="⏳  Running Up sync...", fg=self.T["WARNING"])
+            self._add_libby_message(
+                f"Source folders updated ({n}).\nRunning Up sync...",
+                source=None, file_type=None)
+            self._run_up_then_reload(new_folders, new_mirror)
         else:
             count = collection.count() if collection else 0
             self.status_label.config(
@@ -1680,14 +1755,14 @@ class LibbyApp:
 
         # Book icon shape (simplified polygon)
         bx, by = sw // 2 - 22, 48
-        draw.rectangle([bx, by, bx + 44, by + 52], fill="#8b5e3c")
-        draw.rectangle([bx, by, bx + 44, by + 8],  fill="#c9956c")
+        draw.rectangle([bx, by, bx + 44, by + 52], fill=T["ACCENT_DIM"])
+        draw.rectangle([bx, by, bx + 44, by + 8],  fill=T["ACCENT"])
         for y in [by + 18, by + 24, by + 30, by + 36]:
-            draw.line([bx + 6, y, bx + 36, y], fill="#e8b49a", width=2)
+            draw.line([bx + 6, y, bx + 36, y], fill=T["ACCENT_BRIGHT"], width=2)
 
-        # Footer bar
-        draw.rectangle([0, sh - 36, sw, sh], fill="#252525")
-        draw.rectangle([0, sh - 37, sw, sh - 36], fill="#c9956c")
+        # Footer bar — use panel colour so it blends with theme
+        draw.rectangle([0, sh - 36, sw, sh], fill=T["BG_PANEL"].lstrip("#") and T["BG_PANEL"] or "#252525")
+        draw.rectangle([0, sh - 37, sw, sh - 36], fill=T["ACCENT"])
 
         photo = ImageTk.PhotoImage(img)
         canvas = tk.Canvas(splash, width=sw, height=sh,
@@ -1703,7 +1778,7 @@ class LibbyApp:
         canvas.create_text(sw // 2, 172, text="Universal Knowledge System",
                            font=("Segoe UI", 11),
                            fill="#f0ece8", anchor="center")
-        canvas.create_text(sw // 2, 194, text="V13  •  Offline  •  Air-gapped",
+        canvas.create_text(sw // 2, 194, text="V16  •  Offline  •  Air-gapped",
                            font=("Segoe UI", 9),
                            fill="#6b6560", anchor="center")
         canvas.create_text(sw // 2, sh - 18, text="🔒  No internet required",
@@ -1737,20 +1812,26 @@ class LibbyApp:
         img  = Image.new("RGB", (lw, lh), color=bg_rgb)
         draw = ImageDraw.Draw(img)
 
+        # V15: all colours from theme — works for both dark and light
+        accent      = T["ACCENT"]
+        accent_dim  = T["ACCENT_DIM"]
+        accent_bright = T["ACCENT_BRIGHT"]
         # Rose gold accent bar on left edge
-        draw.rectangle([0, 0, 4, lh], fill="#c9956c")
+        draw.rectangle([0, 0, 4, lh], fill=accent)
 
         # Mini book icon
         bx, by = 16, 10
-        draw.rectangle([bx, by, bx + 22, by + 32], fill="#8b5e3c")
-        draw.rectangle([bx, by, bx + 22, by + 5],  fill="#c9956c")
+        draw.rectangle([bx, by, bx + 22, by + 32], fill=accent_dim)
+        draw.rectangle([bx, by, bx + 22, by + 5],  fill=accent)
         for y in [by + 10, by + 14, by + 18, by + 22]:
-            draw.line([bx + 3, y, bx + 18, y], fill="#e8b49a", width=1)
+            draw.line([bx + 3, y, bx + 18, y], fill=accent_bright, width=1)
 
         photo = ImageTk.PhotoImage(img)
         lbl   = tk.Label(parent, image=photo, bg=T["BG_SIDEBAR"], borderwidth=0)
         lbl.image = photo  # keep reference
         lbl.pack(anchor="w", fill="x")
+        # V15: store ref so _apply_theme can destroy and rebuild it
+        self.sidebar_logo_label = lbl
 
         # "Knowledge Base" text sits in the existing sidebar_title label — no change needed
     def _apply_theme(self):
@@ -1775,6 +1856,10 @@ class LibbyApp:
         for w in self.sidebar.winfo_children():
             try: w.configure(bg=T["BG_SIDEBAR"])
             except: pass
+        # V15: rebuild Pillow sidebar logo with new theme colours
+        if hasattr(self, "sidebar_logo_label") and self.sidebar_logo_label.winfo_exists():
+            self.sidebar_logo_label.destroy()
+        self._build_sidebar_logo(self.sb_header)
         self.sidebar_title.configure(bg=T["BG_SIDEBAR"], fg=T["ACCENT"])
         self.path_label.configure(bg=T["BG_SIDEBAR"], fg=T["TEXT_DIM"])
         self.sidebar_canvas.configure(bg=T["BG_SIDEBAR"])
@@ -1809,15 +1894,16 @@ class LibbyApp:
                  font=F_SMALL).pack(anchor="e", padx=4, pady=(0, 2))
         bubble = tk.Frame(outer, bg=T["BG_BUBBLE_U"], padx=18, pady=12)
         bubble.pack(anchor="e")
-        txt = tk.Text(bubble, height=3, bg=T["BG_BUBBLE_U"], fg=T["TEXT_BUBBLE_U"],
+        # User bubble — plain text, no scrollbar needed
+        txt = tk.Text(bubble, bg=T["BG_BUBBLE_U"], fg=T["TEXT_BUBBLE_U"],
                      font=F_CHAT, wrap="word", relief="flat", bd=0, padx=0, pady=0)
         txt.insert("1.0", text)
         txt.update_idletasks()
-        line_count = int(txt.index("end-1c").split(".")[0])
-        txt.config(height=max(2, line_count), state="disabled", cursor="arrow")
-        txt.pack(anchor="w", fill="both", expand=True)
+        lines = int(txt.index("end-1c").split(".")[0])
+        txt.config(height=max(2, lines), state="disabled", cursor="arrow")
+        txt.pack(anchor="w", fill="x", expand=True)
 
-    def _draw_libby_bubble(self, text, source=None, file_type=None, entry_id=None):
+    def _draw_libby_bubble(self, text, source=None, file_type=None, entry_id=None, scrollable=True):
         T     = self.T
         outer = tk.Frame(self.chat_inner, bg=T["BG_PANEL"], pady=8)
         outer.pack(fill="x", padx=20)
@@ -1825,13 +1911,29 @@ class LibbyApp:
                  font=F_LABEL_B).pack(anchor="w", padx=4, pady=(0, 2))
         bubble = tk.Frame(outer, bg=T["BG_BUBBLE_L"], padx=18, pady=12)
         bubble.pack(anchor="w")
-        txt = tk.Text(bubble, height=3, bg=T["BG_BUBBLE_L"], fg=T["TEXT_BUBBLE_L"],
-                     font=F_CHAT, wrap="word", relief="flat", bd=0, padx=0, pady=0)
+        # V15: scrollable = fixed 15-line with scrollbar; non-scrollable = plain expanding
+        if scrollable:
+            txt_frame = tk.Frame(bubble, bg=T["BG_BUBBLE_L"])
+            txt_frame.pack(anchor="w", fill="x", expand=True)
+            txt = tk.Text(txt_frame, height=15, bg=T["BG_BUBBLE_L"], fg=T["TEXT_BUBBLE_L"],
+                         font=F_CHAT, wrap="word", relief="flat", bd=0, padx=0, pady=0)
+            sb = tk.Scrollbar(txt_frame, command=txt.yview,
+                              bg=T["BG_BUBBLE_L"], troughcolor=T["BG_INPUT"],
+                              relief="flat", bd=0, width=10)
+            txt.configure(yscrollcommand=sb.set)
+            sb.pack(side="right", fill="y")
+            txt.pack(side="left", fill="both", expand=True)
+        else:
+            txt = tk.Text(bubble, height=1, bg=T["BG_BUBBLE_L"], fg=T["TEXT_BUBBLE_L"],
+                         font=F_CHAT, wrap="word", relief="flat", bd=0, padx=0, pady=0)
+            txt.insert("1.0", text)
+            txt.update_idletasks()
+            _lines = int(txt.index("end-1c").split(".")[0])
+            txt.config(height=min(6, max(1, _lines)), state="disabled", cursor="arrow")
+            txt.pack(anchor="w", fill="x", expand=True)
+            return
         txt.insert("1.0", text)
-        txt.update_idletasks()
-        line_count = int(txt.index("end-1c").split(".")[0])
-        txt.config(height=max(2, line_count), state="disabled", cursor="arrow")
-        txt.pack(anchor="w", fill="both", expand=True)
+        txt.config(state="disabled", cursor="arrow")
         if source:
             icon = "📊" if file_type=="xlsx" else ("📕" if file_type=="pdf" else "📄")
             tk.Label(bubble, text=f"{icon}  {os.path.basename(source)}",
@@ -1875,9 +1977,9 @@ class LibbyApp:
         self._draw_user_bubble(text)
         self._build_tab_bar()   # Refresh dot indicator
 
-    def _add_libby_message(self, text, source=None, file_type=None, entry_id=None):
+    def _add_libby_message(self, text, source=None, file_type=None, entry_id=None, scrollable=True):
         self.tabs[self.active_tab]["widgets"].append(("libby", text, source, file_type))
-        self._draw_libby_bubble(text, source, file_type, entry_id=entry_id)
+        self._draw_libby_bubble(text, source, file_type, entry_id=entry_id, scrollable=scrollable)
 
     # ─────────────────────────────────────────
     # AUDIT LOG
@@ -1973,7 +2075,7 @@ class LibbyApp:
         self.tabs[self.active_tab]["has_msgs"] = False
         self._build_tab_bar()
         self._draw_libby_bubble("Session cleared. Ready for questions.",
-                                None, None)
+                                None, None, scrollable=False)
 
     # ─────────────────────────────────────────
     # SCROLL
@@ -1994,9 +2096,8 @@ class LibbyApp:
     # INPUT
     # ─────────────────────────────────────────
     def _placeholder_text(self):
-        return ("Ask me anything from your knowledge base..."
-                if self.active_tab == "knowledge"
-                else "Ask a data question or type 'generate report ...'")
+        # V15: single tab — placeholder covers both modes
+        return "Ask anything — data questions and reports included..."
 
     def _set_placeholder(self):
         self.input_box.delete("1.0", "end")
@@ -2029,7 +2130,7 @@ class LibbyApp:
         self.input_box.config(fg=self.T["TEXT_MAIN"])
         self._add_user_message(question)
 
-        is_report = self.active_tab == "ebi" and "generate report" in question.lower()
+        is_report = "generate report" in question.lower()  # V15: works from any tab
         thinking_frame = self._add_thinking_frame(is_report=is_report)
         self.send_btn.config(state="disabled", bg=self.T["BG_INPUT"])
         self.input_box.config(state="disabled")
@@ -2079,14 +2180,23 @@ class LibbyApp:
                     search_q   = f"{topic_hint} {question}".strip()
                     print(f"[V9] Follow-up detected. Enriched query: '{search_q}'")
 
+                # V15: auto-detect mode from question content
+                DATA_SIGNALS = [
+                    "total","sum","how much","average","avg","highest","lowest",
+                    "maximum","minimum","count","how many","revenue","cost","price",
+                    "generate report","export","report by","sales report",
+                    "balance","profit","margin","variance","ytd","budget"
+                ]
+                q_low        = question.lower()
+                detected_mode = "ebi" if any(s in q_low for s in DATA_SIGNALS) else "knowledge"
                 # Step 3: Retrieve and calculate as normal
                 chunks       = retrieve(search_q)
-                calc_results = get_calculations(search_q) if active_tab == "ebi" else []
+                calc_results = get_calculations(search_q) if detected_mode == "ebi" else []
 
                 # Step 4: Pass full enriched context + history to Ollama
                 answer, sources = ask_ollama(
                     question, chunks, calc_results,
-                    tab_history, active_tab, self.cfg["ollama_model"],
+                    tab_history, detected_mode, self.cfg["ollama_model"],
                     is_followup=is_followup
                 )
                 source_str = ", ".join(sources) if sources else None
@@ -2149,13 +2259,10 @@ class LibbyApp:
         self.root.update()
 
     def _welcome_message(self):
-        if self.active_tab == "knowledge":
-            return ("Welcome to Libby V13  —  Knowledge Assistant\n\n"
-                    "Ask me anything from your loaded documents.\n"
-                    "Switch to the Enterprise BI tab for data and reports.")
-        return ("Welcome to Libby V13  —  Enterprise BI\n\n"
-                "Ask data questions or type 'generate report...' to export Excel.\n"
-                "Switch to the Knowledge Assistant tab for document Q&A.")
+        return ("Welcome to Libby V16\n\n"
+                "Ask me anything from your knowledge base.\n"
+                "For data questions, just ask — I'll detect the mode automatically.\n"
+                "Type 'generate report...' to export an Excel report.")
 
     # ─────────────────────────────────────────
     # MCP — FILE CHANGE HANDLER (V10)
@@ -2181,9 +2288,13 @@ class LibbyApp:
     # ─────────────────────────────────────────
     # BACKEND
     # ─────────────────────────────────────────
-    def _start_backend(self, fresh=False):
-        def load():
-            load_backend(self.cfg["base_path"], fresh=fresh)
+    def _run_up_then_reload(self, source_folders, mirror_folder):
+        """V16: Sync all folders then reload Libby from shared mirror."""
+        def _do():
+            self.mcp.stop()   # pause watcher during sync to avoid feedback loop
+            self._up_sync(source_folders)
+            self.root.after(0, lambda: self.mcp.restart(mirror_folder))
+            load_backend(mirror_folder, fresh=True)
             self.ready = True
             count = collection.count() if collection else 0
             self.root.after(0, lambda: self.status_label.config(
@@ -2191,8 +2302,73 @@ class LibbyApp:
                 fg=self.T["SUCCESS"]
             ))
             self.root.after(0, self._refresh_sidebar)
-            # Start MCP watcher after backend is ready
-            self.root.after(0, lambda: self.mcp.start())
+        threading.Thread(target=_do, daemon=True).start()
+
+    def _up_sync(self, source_folders):
+        """V16: Sync all source folders into the shared mirror."""
+        import importlib.util, shutil as _shutil
+        if isinstance(source_folders, str):
+            source_folders = [source_folders]
+        up_mod = None
+        for name in ["Up_V2.py", "Up_V1.py", "libby_up.py"]:
+            up_path = os.path.join(SCRIPT_DIR, name)
+            if os.path.exists(up_path):
+                try:
+                    spec   = importlib.util.spec_from_file_location("libby_up", up_path)
+                    up_mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(up_mod)
+                except Exception as e:
+                    print(f"[Up] Failed to load Up: {e}")
+                break
+        if not up_mod:
+            print("[Up] No Up script found next to Libby — skipping sync")
+            return
+        shared = shared_mirror_path()
+        os.makedirs(shared, exist_ok=True)
+        for folder in source_folders:
+            if not folder or not os.path.exists(folder):
+                print(f"[Up] Skipping missing folder: {folder}")
+                continue
+            try:
+                result = up_mod.sync(folder)
+                print(f"[Up] {os.path.basename(folder)}: {result.summary()}")
+                folder_mirror = up_mod.mirror_root(folder)
+                archive       = up_mod.archive_root(folder)
+                for root, dirs, files in os.walk(folder_mirror):
+                    dirs[:] = [d for d in dirs
+                               if os.path.join(root, d) != archive
+                               and d not in ["libby_db", "__pycache__"]]
+                    for fname in files:
+                        if not fname.endswith(".txt"): continue
+                        if fname.startswith("up_"): continue
+                        src_file  = os.path.join(root, fname)
+                        rel       = os.path.relpath(src_file, folder_mirror)
+                        dest_file = os.path.join(shared, rel)
+                        os.makedirs(os.path.dirname(dest_file), exist_ok=True)
+                        _shutil.copy2(src_file, dest_file)
+            except Exception as e:
+                print(f"[Up] Sync error for {folder}: {e}")
+
+    def _start_backend(self, fresh=False):
+        """V16: Sync all source folders then load from shared mirror."""
+        def load():
+            folders = self.cfg.get("source_folders", [])
+            mirror  = shared_mirror_path()
+            self.cfg["base_path"] = mirror
+            os.makedirs(mirror, exist_ok=True)
+            if folders:
+                self.mcp.stop()   # pause watcher during sync
+                self._up_sync(folders)
+            # Load Libby RAG from shared mirror
+            load_backend(mirror, fresh=fresh)
+            self.ready = True
+            count = collection.count() if collection else 0
+            self.root.after(0, lambda: self.status_label.config(
+                text=f"✅  {count} chunks  •  {self.cfg['ollama_model']}  •  Offline",
+                fg=self.T["SUCCESS"]
+            ))
+            self.root.after(0, self._refresh_sidebar)
+            self.root.after(0, lambda: self.mcp.restart(mirror))
         threading.Thread(target=load, daemon=True).start()
 
 
