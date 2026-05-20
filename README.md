@@ -13,7 +13,7 @@
 
 ## What is Libby?
 
-Libby is a fully offline, air-gapped AI assistant built in Python. She answers questions from a local knowledge base using RAG (Retrieval Augmented Generation). No internet required after initial setup.
+Libby is a fully offline, air-gapped AI assistant built in Python. The application processes and answers queries from a local knowledge base using RAG (Retrieval Augmented Generation). No internet required after initial setup.
 
 Libby uses a two-component local architecture to parse, index, and query documents completely offline:
 
