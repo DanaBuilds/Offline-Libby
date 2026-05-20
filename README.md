@@ -164,7 +164,7 @@ Place your files in any folder on your machine. Libby supports multiple source f
 | `.docx` | Word documents, policies, procedures |
 
 **Tips for best results:**
-- Use clear descriptive filenames — Libby cites filenames in her answers
+- Use clear descriptive filenames — Libby cites filenames in the answers
 - Organise files into subfolders by topic — subfolder names become searchable tags
 - Excel files work best with clear column headers in row 1
 - PDFs must be text-based (not scanned images)
