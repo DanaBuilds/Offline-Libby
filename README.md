@@ -1,4 +1,4 @@
-# 📚 Libby — Offline AI Knowledge Assistant
+# Libby — Offline AI Knowledge Assistant
 
 > Libby is a fully offline, air-gapped RAG assistant that turns local document folders into a private, conversational knowledge base. It runs entirely on your local machine with zero cloud dependencies.
 
