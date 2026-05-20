@@ -17,7 +17,7 @@ Libby is a fully offline, air-gapped AI assistant built in Python. She answers q
 
 Libby uses a two-component local architecture to parse, index, and query documents completely offline:
 
-As of V14, Libby works as a two-component system:
+As of V14:
 
 | Component | File | Role |
 |---|---|---|
@@ -28,7 +28,7 @@ Up runs automatically in the background whenever Libby starts. You never need to
 
 ---
 
-## ✨ What's New in V16
+## What's New in V16
 
 - **Multiple knowledge source folders** — add as many source folders as you like via Settings
 - **Shared mirror** — all folders sync into a single `_libby_mirror/` next to `libby_V16.py`, Libby searches across everything in one pass
@@ -37,7 +37,7 @@ Up runs automatically in the background whenever Libby starts. You never need to
 
 ---
 
-## ✨ Recent Version Highlights
+## Recent Version Highlights
 
 **V15**
 - Single **Ask Libby** tab — Knowledge Assistant and Enterprise BI merged; Libby auto-detects the question mode internally
@@ -51,7 +51,7 @@ Up runs automatically in the background whenever Libby starts. You never need to
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 Source Folders (your documents)
@@ -76,7 +76,7 @@ Originals are **never touched**. Up maintains a SQLite index (`up_index.db`) tra
 
 ---
 
-## 🖥️ System Requirements
+## System Requirements
 
 - Windows 10 or 11 (64-bit)
 - AMD Ryzen 7 or equivalent (recommended)
@@ -86,12 +86,12 @@ Originals are **never touched**. Up maintains a SQLite index (`up_index.db`) tra
 
 ---
 
-## ⚙️ Step 1 — Install Python
+## Step 1 — Install Python
 
 1. Go to `https://www.python.org/downloads/`
 2. Download the latest **Python 3.x** version for Windows (64-bit)
 3. Run the installer
-4. ⚠️ **Important:** Check **"Add Python to PATH"** before clicking Install
+4. **Important:** Check **"Add Python to PATH"** before clicking Install
 5. Click **Install Now**
 
 Verify it worked — open PowerShell and type:
@@ -102,7 +102,7 @@ You should see something like `Python 3.14.0`
 
 ---
 
-## 📦 Step 2 — Install Required Libraries
+## Step 2 — Install Required Libraries
 
 Open PowerShell and run:
 ```
@@ -115,7 +115,7 @@ This may take a few minutes. Wait for it to finish before moving on.
 
 ---
 
-## 🤖 Step 3 — Install Ollama
+## Step 3 — Install Ollama
 
 Ollama runs the AI model locally on your machine.
 
@@ -130,7 +130,7 @@ ollama --version
 
 ---
 
-## 🧠 Step 4 — Download an AI Model
+## Step 4 — Download an AI Model
 
 ```
 ollama pull gpt-oss:20b
@@ -150,7 +150,7 @@ You can change the active model at any time in Libby's Settings panel.
 
 ---
 
-## 📄 Step 5 — Add Your Knowledge Files
+## Step 5 — Add Your Knowledge Files
 
 Place your files in any folder on your machine. Libby supports multiple source folders — you can add them all in Settings.
 
@@ -171,7 +171,7 @@ Place your files in any folder on your machine. Libby supports multiple source f
 
 ---
 
-## 🚀 Step 6 — Run Libby
+## Step 6 — Run Libby
 
 In PowerShell, navigate to your Libby folder and run:
 ```
@@ -188,9 +188,9 @@ Subsequent launches are much faster — Up only processes changed files.
 
 ---
 
-## ⚙️ Step 7 — Configure Your Settings
+## Step 7 — Configure Your Settings
 
-Click **⚙ Settings** in the top right corner.
+Click **Settings** in the top right corner.
 
 | Setting | What it does |
 |---|---|
@@ -205,9 +205,9 @@ To add a new source folder: click **+ Add Folder**, select it, click Save & Appl
 
 ---
 
-## 💬 How to Use Libby
+## How to Use Libby
 
-### 💬 Ask Libby Tab
+### Ask Libby Tab
 
 Ask anything in plain English — Libby automatically detects whether your question is a knowledge question or a data question and switches mode internally.
 
@@ -242,13 +242,13 @@ A save dialog opens. Libby builds a fully formatted Excel report with:
 - Auto-generated rose gold bar chart
 - Confidentiality footer
 
-### 👍👎 Feedback
+### Feedback
 
 Every Libby response has thumbs up / thumbs down buttons. Ratings are saved to `feedback_log.json` as an audit trail.
 
 ---
 
-## 🔁 Up — Document Mirror Engine
+## Up — Document Mirror Engine
 
 Up (`Up_V2.py`) runs automatically as part of Libby. It can also be run standalone from the terminal:
 
@@ -282,7 +282,7 @@ Index: 12 docs  •  54 sections  •  183 chunks  •  1,204 sentences
 
 ---
 
-## 🔁 MCP — Live File Monitoring
+## MCP — Live File Monitoring
 
 Libby includes a Model Context Protocol (MCP) layer powered by `watchdog` that monitors `_libby_mirror/` in real time:
 
@@ -294,7 +294,7 @@ Libby includes a Model Context Protocol (MCP) layer powered by `watchdog` that m
 
 ---
 
-## 🧪 Evaluation Tab
+## Evaluation Tab
 
 The Evaluation tab is a developer tool for testing Libby's accuracy:
 
@@ -309,22 +309,22 @@ The Evaluation tab is a developer tool for testing Libby's accuracy:
 
 ---
 
-## 🔒 Privacy & Air-Gap
+## Privacy & Air-Gap
 
 Libby is designed to work **completely offline:**
 
-- ✅ No data sent to the internet
-- ✅ No cloud APIs used
-- ✅ All knowledge stays on your machine
-- ✅ Ollama and ChromaDB run entirely locally
-- ✅ Generated reports never leave your computer unless you share them
-- ✅ Compatible with Faraday bag deployment for true signal isolation
+- No data sent to the internet
+- No cloud APIs used
+- All knowledge stays on your machine
+- Ollama and ChromaDB run entirely locally
+- Generated reports never leave your computer unless you share them
+- Compatible with Faraday bag deployment for true signal isolation
 
 After initial setup Libby never needs an internet connection.
 
 ---
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 **Libby shows "0 chunks" or files are missing:**
 - Open Settings, confirm your source folders are listed, click Save & Apply
@@ -353,7 +353,7 @@ After initial setup Libby never needs an internet connection.
 
 ---
 
-## 📋 Requirements Summary
+## Requirements Summary
 
 | Requirement | Version |
 |---|---|
@@ -373,7 +373,7 @@ After initial setup Libby never needs an internet connection.
 
 ---
 
-## 📁 Auto-Generated Files
+## Auto-Generated Files
 
 Libby and Up create these automatically — you never need to edit them:
 
@@ -390,7 +390,7 @@ Libby and Up create these automatically — you never need to edit them:
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
 - [ ] Tune evaluation scorer to reduce false negatives
 - [ ] Package as `.exe` with PyInstaller — one-click launch, no Python required
@@ -407,7 +407,7 @@ Libby and Up create these automatically — you never need to edit them:
 
 ---
 
-## 📜 Version History
+## Version History
 
 | Version | Highlights |
 |---|---|
