@@ -318,7 +318,6 @@ Libby is designed to work **completely offline:**
 - All knowledge stays on your machine
 - Ollama and ChromaDB run entirely locally
 - Generated reports never leave your computer unless you share them
-- Compatible with Faraday bag deployment for true signal isolation
 
 After initial setup Libby never needs an internet connection.
 
